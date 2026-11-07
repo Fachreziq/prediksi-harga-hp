@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prediksi Kategori Harga Smartphone</title>
+  <meta name="description" content="Prediksi kategori harga smartphone dari spesifikasi menggunakan Decision Tree.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div>
+      <h1>Prediksi Kategori Harga Smartphone</h1>
+      <p class="sub">Masukkan spesifikasi, model Decision Tree menentukan kategori harganya dan menunjukkan alasannya.</p>
+    </div>
+    <p class="model-info">Decision Tree, kedalaman {{ kedalaman }}, {{ jumlah_daun }} daun</p>
+  </div>
+</header>
+
+<main class="wrap layout">
+
+  <section class="panel form-panel" aria-labelledby="judul-form">
+    <h2 id="judul-form">Spesifikasi smartphone</h2>
+
+    <div class="presets" role="group" aria-label="Isi dengan contoh">
+      <span class="presets-label">Isi contoh:</span>
+      <button type="button" class="chip" data-preset="rendah">Rendah</button>
+      <button type="button" class="chip" data-preset="sedang">Sedang</button>
+      <button type="button" class="chip" data-preset="tinggi">Tinggi</button>
+      <button type="button" class="chip" data-preset="sangat_tinggi">Sangat tinggi</button>
+    </div>
+
+    {% if error %}
+    <div class="alert" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" id="form-prediksi" novalidate>
+      {% for f in fields %}
+      <div class="field">
+        <label for="{{ f.name }}">{{ f.label }}</label>
+        <div class="input-wrap">
+          <input type="number" inputmode="decimal" id="{{ f.name }}" name="{{ f.name }}"
+                 min="{{ f.min }}" max="{{ f.max }}" step="any" required
+                 value="{{ nilai.get(f.name, '') }}"
+                 aria-describedby="hint-{{ f.name }}">
+          <span class="unit">{{ f.unit }}</span>
+        </div>
+        <p class="hint" id="hint-{{ f.name }}">Rentang {{ f.min }} sampai {{ f.max }}. {{ f.hint }}</p>
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn-primary">Prediksi harga</button>
+    </form>
+  </section>
+
+  <section class="panel result-panel" aria-labelledby="judul-hasil" aria-live="polite">
+    <h2 id="judul-hasil">Hasil prediksi</h2>
+
+    {% if hasil %}
+      <div class="verdict">
+        <p class="verdict-label">Kategori harga</p>
+        <p class="verdict-name tone-{{ hasil.kelas }}">{{ hasil.nama }}</p>
+      </div>
+
+      <ol class="scale" aria-label="Skala kategori harga">
+        {% for k in kategori %}
+        <li class="scale-step tone-bg-{{ loop.index0 }}{% if loop.index0 == hasil.kelas %} is-active{% endif %}"
+            {% if loop.index0 == hasil.kelas %}aria-current="true"{% endif %}>
+          <span>{{ k }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+
+      <h3>Keyakinan model</h3>
+      <ul class="bars">
+        {% for p in hasil.probabilitas %}
+        <li>
+          <span class="bar-name">{{ p.nama }}</span>
+          <span class="bar-track"><span class="bar-fill{% if p.aktif %} is-active{% endif %}" style="width: {{ p.persen }}%"></span></span>
+          <span class="bar-value">{{ p.persen }}%</span>
+        </li>
+        {% endfor %}
+      </ul>
+
+      <h3>Jalur keputusan</h3>
+      <p class="note">Pertanyaan yang dijawab pohon untuk spesifikasi ini, dari akar sampai daun.</p>
+      <ol class="path">
+        {% for s in hasil.jalur %}
+        <li>
+          <span class="path-q">{{ s.fitur }} {{ s.operator }} {{ s.batas }} {{ s.unit }}</span>
+          <span class="path-a">Input Anda {{ s.nilai }} {{ s.unit }}, jawaban: {{ 'ya' if s.operator == '≤' else 'tidak' }}</span>
+        </li>
+        {% endfor %}
+        <li class="path-end">
+          <span class="path-q">Kategori: {{ hasil.nama }}</span>
+        </li>
+      </ol>
+    {% else %}
+      <div class="empty">
+        <p class="empty-title">Belum ada prediksi</p>
+        <p>Isi kelima kolom di sebelah kiri, atau pilih satu contoh, lalu tekan Prediksi harga.</p>
+      </div>
+    {% endif %}
+  </section>
+
+</main>
+
+<footer class="wrap footer">
+  <p>Dataset: Mobile Price Classification (Kaggle). Model dilatih dengan scikit-learn. Hasil prediksi bersifat perkiraan dari data latih, bukan harga pasar.</p>
+</footer>
+
+<script>
+  var CONTOH = {{ contoh | tojson }};
+  document.querySelectorAll('[data-preset]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var nilai = CONTOH[btn.dataset.preset];
+      Object.keys(nilai).forEach(function (nama) {
+        var el = document.getElementById(nama);
+        if (el) el.value = nilai[nama];
+      });
+    });
+  });
+</script>
+</body>
+</html>
