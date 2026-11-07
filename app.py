@@ -1,8 +1,12 @@
 import os
+import warnings
 
 import joblib
-import pandas as pd
+import numpy as np
 from flask import Flask, render_template, request
+
+# Model dilatih dengan DataFrame; input di sini berupa array, jadi peringatan nama fitur diabaikan.
+warnings.filterwarnings("ignore", message="X does not have valid feature names")
 
 app = Flask(__name__)
 
@@ -53,7 +57,7 @@ def jalur_keputusan(X_baru):
         if tree.children_left[node] == tree.children_right[node]:
             continue  # daun, tidak ada pertanyaan
         nama = fitur[tree.feature[node]]
-        nilai = float(X_baru.iloc[0][nama])
+        nilai = float(X_baru[0][fitur.index(nama)])
         batas = float(tree.threshold[node])
         kecil = nilai <= batas
         langkah.append({
@@ -82,7 +86,7 @@ def index():
                 error = ("Nilai di luar rentang data latih pada: " + ", ".join(di_luar) +
                          ". Perbaiki sesuai rentang yang tertera di bawah kolom.")
             else:
-                X_baru = pd.DataFrame([nilai], columns=fitur)
+                X_baru = np.array([[nilai[f] for f in fitur]])
                 kelas = int(model.predict(X_baru)[0])
                 proba = model.predict_proba(X_baru)[0]
                 hasil = {
